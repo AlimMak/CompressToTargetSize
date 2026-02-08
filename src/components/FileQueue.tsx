@@ -10,11 +10,11 @@ interface FileQueueProps {
 
 export function FileQueue({ items, onRemove, onClear, onDownload }: FileQueueProps) {
   return (
-    <section className="panel p-5 sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <section className="panel p-3">
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="panel-title">File Queue</h2>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400">{items.length} item(s)</span>
+          <span className="meta-text mono">{items.length} item(s)</span>
           <button type="button" className="btn-secondary" disabled={!items.length} onClick={onClear}>
             Clear queue
           </button>
@@ -22,11 +22,11 @@ export function FileQueue({ items, onRemove, onClear, onDownload }: FileQueuePro
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-slate-700/70 bg-slate-900/45 px-4 py-8 text-center text-sm text-slate-400">
+        <div className="rounded-sm border border-zinc-800 bg-zinc-950 px-3 py-5 text-center text-sm text-zinc-500">
           Drop images to start. Compression runs only when you click <strong>Compress All</strong>.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {items.map((item) => (
             <ResultRow key={item.id} item={item} onRemove={onRemove} onDownload={onDownload} />
           ))}

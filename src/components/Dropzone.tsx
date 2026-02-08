@@ -18,10 +18,10 @@ export function Dropzone({ disabled = false, onFilesSelected }: DropzoneProps) {
   }
 
   return (
-    <section className="panel p-5 sm:p-6">
-      <div className="mb-3 flex items-center justify-between">
+    <section className="panel p-3">
+      <div className="mb-2 flex items-center justify-between">
         <h2 className="panel-title">Add Images</h2>
-        <span className="text-xs text-slate-400">JPEG, PNG, WEBP, AVIF</span>
+        <span className="meta-text">JPEG, PNG, WEBP, AVIF</span>
       </div>
 
       <label
@@ -45,21 +45,18 @@ export function Dropzone({ disabled = false, onFilesSelected }: DropzoneProps) {
           handleFiles(event.dataTransfer.files)
         }}
         className={`
-          relative block cursor-pointer rounded-2xl border border-dashed px-5 py-8 text-center transition
+          relative block cursor-pointer rounded-sm border border-dashed px-3 py-6 text-center transition
           ${
             isDragging
-              ? 'border-cyan-400 bg-cyan-500/10'
-              : 'border-slate-600/80 bg-slate-900/50 hover:border-cyan-500/70 hover:bg-slate-900/70'
+              ? 'border-zinc-500 bg-zinc-800'
+              : 'border-zinc-700 bg-zinc-950 hover:border-zinc-600 hover:bg-zinc-900'
           }
           ${disabled ? 'cursor-not-allowed opacity-60' : ''}
         `}
       >
-        <div className="space-y-3">
-          <p className="text-base font-semibold text-slate-100">Drag and drop images here</p>
-          <p className="text-sm text-slate-400">or click to choose multiple files</p>
-          <span className="inline-flex rounded-full border border-slate-600 px-3 py-1 text-xs text-slate-300">
-            All processing is local in your browser
-          </span>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-zinc-100">Drag files here or click to browse</p>
+          <p className="meta-text">Multiple files supported</p>
         </div>
       </label>
 

@@ -22,10 +22,10 @@ export function SettingsPanel({
   }
 
   return (
-    <section className="panel p-5 sm:p-6">
-      <h2 className="panel-title mb-4">Settings</h2>
+    <section className="panel p-3">
+      <h2 className="panel-title mb-3">Settings</h2>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="field-group">
           <span className="field-label">Target size</span>
           <input
@@ -115,12 +115,12 @@ export function SettingsPanel({
         </label>
       </div>
 
-      <details className="mt-5 rounded-xl border border-slate-700/70 bg-slate-900/45 p-4">
-        <summary className="cursor-pointer select-none text-sm font-semibold text-slate-200">
+      <details className="mt-3 rounded-sm border border-zinc-800 bg-zinc-950 p-3">
+        <summary className="cursor-pointer select-none text-sm font-medium text-zinc-300">
           Advanced quality controls
         </summary>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="field-group">
             <span className="field-label">Minimum quality</span>
             <input

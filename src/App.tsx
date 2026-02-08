@@ -356,82 +356,74 @@ export default function App() {
   }, [completedItems])
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
+    <div className="mx-auto w-full max-w-[720px] px-4 py-6 sm:py-8">
       <Header />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-6">
-          <Dropzone disabled={isCompressing} onFilesSelected={addFilesToQueue} />
-          <FileQueue items={queue} onRemove={removeItem} onClear={clearQueue} onDownload={downloadSingle} />
-        </div>
+      <div className="mt-4 space-y-3">
+        <SettingsPanel
+          settings={settings}
+          supportedFormats={supportedFormats}
+          disabled={isCompressing}
+          onChange={setSettings}
+        />
 
-        <div className="space-y-6">
-          <SettingsPanel
-            settings={settings}
-            supportedFormats={supportedFormats}
-            disabled={isCompressing}
-            onChange={setSettings}
-          />
+        <Dropzone disabled={isCompressing} onFilesSelected={addFilesToQueue} />
+        <FileQueue items={queue} onRemove={removeItem} onClear={clearQueue} onDownload={downloadSingle} />
 
-          <section className="panel p-5 sm:p-6">
-            <h2 className="panel-title mb-4">Batch Actions</h2>
+        <section className="panel p-3">
+          <h2 className="panel-title mb-3">Results</h2>
 
-            <div className="space-y-3">
-              <button
-                type="button"
-                className="btn-primary w-full justify-center py-3 text-base"
-                disabled={pendingItems.length === 0 || isCompressing}
-                onClick={() => {
-                  void startCompression()
-                }}
-              >
-                Compress All ({pendingItems.length})
-              </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={pendingItems.length === 0 || isCompressing}
+              onClick={() => {
+                void startCompression()
+              }}
+            >
+              Compress All ({pendingItems.length})
+            </button>
 
-              <button
-                type="button"
-                className="btn-secondary w-full justify-center py-3"
-                disabled={!isCompressing}
-                onClick={cancelCompression}
-              >
-                Cancel Batch
-              </button>
-            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={!isCompressing}
+              onClick={cancelCompression}
+            >
+              Cancel Batch
+            </button>
 
-            <div className="mt-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4">
-              <p className="text-sm font-semibold text-cyan-100">Privacy</p>
-              <p className="mt-1 text-sm text-cyan-50/90">Files never leave your device.</p>
-              <p className="mt-1 text-xs text-cyan-100/80">
-                No analytics, no tracking, and metadata is stripped by canvas re-encoding.
-              </p>
-            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={completedItems.length === 0}
+              onClick={() => {
+                void downloadAll()
+              }}
+            >
+              Download All (ZIP)
+            </button>
+          </div>
 
-            <div className="mt-4 rounded-xl border border-slate-700/70 bg-slate-900/45 p-4">
-              <p className="text-sm text-slate-300">Completed files: {completedItems.length}</p>
-              <button
-                type="button"
-                className="btn-primary mt-3 w-full justify-center py-3 text-base"
-                disabled={completedItems.length === 0}
-                onClick={() => {
-                  void downloadAll()
-                }}
-              >
-                Download All (ZIP)
-              </button>
-            </div>
+          <p className="meta-text mt-3">
+            Completed files: <span className="mono text-zinc-300">{completedItems.length}</span>
+          </p>
+          <p className="meta-text mt-1">
+            No analytics or tracking. Metadata is stripped during canvas re-encoding.
+          </p>
+        </section>
+
+        {intakeMessages.length > 0 ? (
+          <section className="panel p-3">
+            <h2 className="panel-title mb-2">Validation Messages</h2>
+            <ul className="space-y-1 text-xs text-amber-300">
+              {intakeMessages.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
           </section>
-
-          {intakeMessages.length > 0 ? (
-            <section className="panel p-4">
-              <h2 className="panel-title mb-2">Validation Messages</h2>
-              <ul className="space-y-1 text-xs text-amber-200">
-                {intakeMessages.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </div>
+        ) : null}
       </div>
     </div>
   )
