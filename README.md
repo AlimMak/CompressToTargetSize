@@ -1,5 +1,5 @@
 # CompressToTargetSize
-
+https://makscompress.vercel.app/
 Privacy-first web app to compress images to a target file size directly in the browser.
 
 ## Setup
