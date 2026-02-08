@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: 'Avenir Next', 'Segoe UI', 'Trebuchet MS', 'Nimbus Sans', sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  color: #dbe6f7;
+  background:
+    radial-gradient(circle at 10% -15%, rgba(6, 182, 212, 0.2), transparent 34%),
+    radial-gradient(circle at 90% 15%, rgba(217, 70, 239, 0.14), transparent 30%),
+    linear-gradient(160deg, #060b14 0%, #0a1323 42%, #0f1020 100%);
+}
+
+button,
+input,
+select,
+summary {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.25);
+  color: #ecfeff;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-slate-700/70 bg-slate-900/65 shadow-[0_18px_45px_rgba(2,6,23,0.5)] backdrop-blur-sm;
+  }
+
+  .panel-title {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-slate-300;
+  }
+
+  .field-group {
+    @apply block;
+  }
+
+  .field-label {
+    @apply text-xs font-medium uppercase tracking-[0.08em] text-slate-400;
+  }
+
+  .field-input {
+    @apply mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950/75 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center rounded-lg border border-cyan-400/50 bg-cyan-500/15 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-700/40 disabled:text-slate-400;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center rounded-lg border border-slate-600 bg-slate-800/70 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700/80 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500;
+  }
+}
