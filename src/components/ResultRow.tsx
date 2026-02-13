@@ -37,6 +37,23 @@ export function ResultRow({ item, onRemove, onDownload }: ResultRowProps) {
 
             {result ? (
               <div className="mt-1 space-y-1 text-xs text-zinc-400">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="meta-text">
+                    Target:{' '}
+                    {result.targetMode === 'range' ? (
+                      <span className="mono text-zinc-300">
+                        {formatBytes(result.targetMinBytes)} - {formatBytes(result.targetMaxBytes)}
+                      </span>
+                    ) : (
+                      <span className="mono text-zinc-300">&lt;= {formatBytes(result.targetMaxBytes)}</span>
+                    )}
+                  </span>
+                  {result.targetMode === 'range' && result.reachedTarget ? (
+                    <span className="inline-flex rounded-sm border border-emerald-900 bg-emerald-950/40 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                      Hit target
+                    </span>
+                  ) : null}
+                </div>
                 <p>
                   Compressed: <span className="mono text-zinc-200">{formatBytes(result.compressedBytes)}</span>{' '}
                   <span className="mono text-zinc-300">({formatReduction(result.reductionPercent)})</span>
@@ -48,8 +65,8 @@ export function ResultRow({ item, onRemove, onDownload }: ResultRowProps) {
                 <p>
                   Output: <span className="mono text-zinc-300">{result.width}x{result.height}</span>
                 </p>
-                {result.cannotReachTarget ? (
-                  <p className="text-amber-300">Cannot reach target exactly; showing smallest result found.</p>
+                {result.cannotReachTarget && result.targetMissReason ? (
+                  <p className="text-amber-300">{result.targetMissReason}</p>
                 ) : null}
               </div>
             ) : null}

@@ -1,9 +1,11 @@
-import type { CompressionResult, OutputFormat } from '../types'
+import type { CompressionResult, OutputFormat, TargetMode } from '../types'
 import { createAbortError } from './concurrency'
 
 interface CompressOptions {
   file: File
-  targetBytes: number
+  targetMode: TargetMode
+  targetMinBytes: number
+  targetMaxBytes: number
   outputFormat: OutputFormat
   minQuality: number
   maxQuality: number
@@ -26,6 +28,11 @@ interface EncodedCandidate {
   iterations: number
   width: number
   height: number
+}
+
+interface QualitySearchResult {
+  bestAtOrBelowMax: EncodedCandidate | null
+  smallestCandidate: EncodedCandidate
 }
 
 const DOWNSCALE_FACTOR = 0.85
@@ -60,12 +67,34 @@ function normalizeMaxWidth(maxWidth?: number): number | undefined {
   return Math.max(MIN_DIMENSION, Math.floor(maxWidth as number))
 }
 
-function normalizeTargetBytes(targetBytes: number): number {
-  if (!Number.isFinite(targetBytes)) {
+function normalizePositiveBytes(value: number): number {
+  if (!Number.isFinite(value)) {
     return 1024
   }
 
-  return Math.max(1, Math.floor(targetBytes))
+  return Math.max(1, Math.floor(value))
+}
+
+function normalizeTargetBounds(
+  targetMode: TargetMode,
+  targetMinBytes: number,
+  targetMaxBytes: number,
+): { min: number; max: number } {
+  const max = normalizePositiveBytes(targetMaxBytes)
+
+  if (targetMode === 'under') {
+    return {
+      min: 0,
+      max,
+    }
+  }
+
+  const min = normalizePositiveBytes(targetMinBytes)
+
+  return {
+    min: Math.min(min, max),
+    max: Math.max(min, max),
+  }
 }
 
 function normalizeIterationCount(maxIterations: number): number {
@@ -101,6 +130,15 @@ function buildOutputName(sourceName: string, outputFormat: OutputFormat): string
   const baseName = dotIndex > 0 ? sourceName.slice(0, dotIndex) : sourceName
 
   return `${baseName}-compressed.${getOutputExtension(outputFormat)}`
+}
+
+function formatBytesForMessage(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    const mb = bytes / (1024 * 1024)
+    return `${mb >= 10 ? mb.toFixed(1) : mb.toFixed(2)} MB`
+  }
+
+  return `${(bytes / 1024).toFixed(bytes >= 10 * 1024 ? 0 : 1)} KB`
 }
 
 function calculateDimensions(
@@ -255,19 +293,19 @@ async function runQualitySearch(options: {
   width: number
   height: number
   outputFormat: OutputFormat
-  targetBytes: number
+  targetMaxBytes: number
   minQuality: number
   maxQuality: number
   maxIterations: number
   tolerance: number
   signal?: AbortSignal
-}): Promise<{ bestUnderTarget: EncodedCandidate | null; smallestCandidate: EncodedCandidate }> {
+}): Promise<QualitySearchResult> {
   const {
     canvas,
     width,
     height,
     outputFormat,
-    targetBytes,
+    targetMaxBytes,
     minQuality,
     maxQuality,
     maxIterations,
@@ -294,26 +332,49 @@ async function runQualitySearch(options: {
     }
   }
 
+  const minCandidate = await encodeAtQuality(normalizedMin)
+  let smallestCandidate = minCandidate
+  let bestAtOrBelowMax: EncodedCandidate | null =
+    minCandidate.blob.size <= targetMaxBytes ? minCandidate : null
+
   let lowerBound = normalizedMin
   let upperBound = normalizedMax
 
-  const minCandidate = await encodeAtQuality(normalizedMin)
-  let smallestCandidate = minCandidate
-  let bestUnderTarget: EncodedCandidate | null =
-    minCandidate.blob.size <= targetBytes ? minCandidate : null
+  if (normalizedMax !== normalizedMin) {
+    const maxCandidate = await encodeAtQuality(normalizedMax)
 
-  if (bestUnderTarget) {
-    const delta = targetBytes - bestUnderTarget.blob.size
-    if (delta <= targetBytes * normalizedTolerance) {
+    if (maxCandidate.blob.size < smallestCandidate.blob.size) {
+      smallestCandidate = maxCandidate
+    }
+
+    if (
+      maxCandidate.blob.size <= targetMaxBytes &&
+      (!bestAtOrBelowMax || maxCandidate.blob.size > bestAtOrBelowMax.blob.size)
+    ) {
+      bestAtOrBelowMax = maxCandidate
+    }
+
+    if (maxCandidate.blob.size <= targetMaxBytes) {
+      lowerBound = normalizedMax
+    }
+  }
+
+  if (bestAtOrBelowMax) {
+    const distanceToMax = targetMaxBytes - bestAtOrBelowMax.blob.size
+    if (distanceToMax <= targetMaxBytes * normalizedTolerance) {
       return {
-        bestUnderTarget,
+        bestAtOrBelowMax,
         smallestCandidate,
       }
     }
   }
 
-  while (iterationsUsed < allowedIterations) {
+  for (let iteration = 0; iteration < allowedIterations; iteration += 1) {
     throwIfAborted(signal)
+
+    if (Math.abs(upperBound - lowerBound) < 0.003) {
+      break
+    }
 
     const midQuality = Number(((lowerBound + upperBound) / 2).toFixed(4))
     const candidate = await encodeAtQuality(midQuality)
@@ -322,30 +383,26 @@ async function runQualitySearch(options: {
       smallestCandidate = candidate
     }
 
-    if (candidate.blob.size > targetBytes) {
+    if (candidate.blob.size > targetMaxBytes) {
       upperBound = midQuality
     } else {
-      if (!bestUnderTarget || candidate.blob.size > bestUnderTarget.blob.size) {
-        bestUnderTarget = candidate
+      if (!bestAtOrBelowMax || candidate.blob.size > bestAtOrBelowMax.blob.size) {
+        bestAtOrBelowMax = candidate
       }
 
       lowerBound = midQuality
     }
 
-    if (bestUnderTarget) {
-      const delta = targetBytes - bestUnderTarget.blob.size
-      if (delta <= targetBytes * normalizedTolerance) {
+    if (bestAtOrBelowMax) {
+      const distanceToMax = targetMaxBytes - bestAtOrBelowMax.blob.size
+      if (distanceToMax <= targetMaxBytes * normalizedTolerance) {
         break
       }
-    }
-
-    if (Math.abs(upperBound - lowerBound) < 0.003) {
-      break
     }
   }
 
   return {
-    bestUnderTarget,
+    bestAtOrBelowMax,
     smallestCandidate,
   }
 }
@@ -355,8 +412,22 @@ function buildResult(options: {
   outputFormat: OutputFormat
   candidate: EncodedCandidate
   reachedTarget: boolean
+  targetMode: TargetMode
+  targetMinBytes: number
+  targetMaxBytes: number
+  targetMissReason: string | null
 }): CompressionResult {
-  const { file, outputFormat, candidate, reachedTarget } = options
+  const {
+    file,
+    outputFormat,
+    candidate,
+    reachedTarget,
+    targetMode,
+    targetMinBytes,
+    targetMaxBytes,
+    targetMissReason,
+  } = options
+
   const downloadUrl = URL.createObjectURL(candidate.blob)
   const reductionPercent =
     file.size > 0 ? ((file.size - candidate.blob.size) / file.size) * 100 : 0
@@ -372,6 +443,10 @@ function buildResult(options: {
     iterations: candidate.iterations,
     reachedTarget,
     cannotReachTarget: !reachedTarget,
+    targetMode,
+    targetMinBytes,
+    targetMaxBytes,
+    targetMissReason,
     mimeType: outputFormat,
     width: candidate.width,
     height: candidate.height,
@@ -388,9 +463,10 @@ export async function compressToTarget(options: CompressOptions): Promise<Compre
     maxIterations,
     tolerance,
     maxWidth,
+    targetMode,
   } = options
 
-  const targetBytes = normalizeTargetBytes(options.targetBytes)
+  const bounds = normalizeTargetBounds(targetMode, options.targetMinBytes, options.targetMaxBytes)
   const normalizedMaxWidth = normalizeMaxWidth(maxWidth)
 
   const decoded = await decodeImage(file, signal)
@@ -406,12 +482,12 @@ export async function compressToTarget(options: CompressOptions): Promise<Compre
       throwIfAborted(signal)
 
       const rendered = renderToCanvas(decoded.source, decoded.width, decoded.height, workingWidth)
-      const { bestUnderTarget, smallestCandidate } = await runQualitySearch({
+      const { bestAtOrBelowMax, smallestCandidate } = await runQualitySearch({
         canvas: rendered.canvas,
         width: rendered.width,
         height: rendered.height,
         outputFormat,
-        targetBytes,
+        targetMaxBytes: bounds.max,
         minQuality,
         maxQuality,
         maxIterations,
@@ -423,14 +499,44 @@ export async function compressToTarget(options: CompressOptions): Promise<Compre
         smallestOverall = smallestCandidate
       }
 
-      if (bestUnderTarget) {
-        throwIfAborted(signal)
+      if (bestAtOrBelowMax) {
+        if (targetMode === 'under') {
+          return buildResult({
+            file,
+            outputFormat,
+            candidate: bestAtOrBelowMax,
+            reachedTarget: true,
+            targetMode,
+            targetMinBytes: bounds.min,
+            targetMaxBytes: bounds.max,
+            targetMissReason: null,
+          })
+        }
+
+        if (bestAtOrBelowMax.blob.size >= bounds.min) {
+          return buildResult({
+            file,
+            outputFormat,
+            candidate: bestAtOrBelowMax,
+            reachedTarget: true,
+            targetMode,
+            targetMinBytes: bounds.min,
+            targetMaxBytes: bounds.max,
+            targetMissReason: null,
+          })
+        }
 
         return buildResult({
           file,
           outputFormat,
-          candidate: bestUnderTarget,
-          reachedTarget: true,
+          candidate: bestAtOrBelowMax,
+          reachedTarget: false,
+          targetMode,
+          targetMinBytes: bounds.min,
+          targetMaxBytes: bounds.max,
+          targetMissReason: `Could not reach the minimum target of ${formatBytesForMessage(
+            bounds.min,
+          )} without exceeding limits.`,
         })
       }
 
@@ -450,13 +556,20 @@ export async function compressToTarget(options: CompressOptions): Promise<Compre
       throw new Error('Unable to generate a compressed image output.')
     }
 
-    throwIfAborted(signal)
+    const missReason =
+      targetMode === 'range'
+        ? `Could not compress below the maximum target of ${formatBytesForMessage(bounds.max)}.`
+        : `Could not compress under ${formatBytesForMessage(bounds.max)}.`
 
     return buildResult({
       file,
       outputFormat,
       candidate: smallestOverall,
       reachedTarget: false,
+      targetMode,
+      targetMinBytes: bounds.min,
+      targetMaxBytes: bounds.max,
+      targetMissReason: missReason,
     })
   } finally {
     decoded.release()

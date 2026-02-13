@@ -29,6 +29,14 @@ npm run preview
 - Service worker + manifest are included.
 - After first load, the app can be opened offline for previously cached assets.
 
+## Target modes and presets
+
+- `Under` mode compresses to stay at or below a maximum target size.
+- `Range` mode tries to land between minimum and maximum KB bounds.
+- If `Range` cannot reach the minimum without breaking constraints, the app returns the best file at or below the max and explains why it missed.
+- Presets can auto-fill format, target mode, target size/range, and max width for common workflows.
+- Selected preset and target mode are persisted in local storage.
+
 ## Git remote fallback
 
 If your remote is not configured:

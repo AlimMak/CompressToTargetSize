@@ -1,12 +1,22 @@
 export type OutputFormat = 'image/jpeg' | 'image/webp' | 'image/avif'
 
 export type TargetUnit = 'KB' | 'MB'
+export type TargetMode = 'under' | 'range'
+export type PresetId =
+  | 'custom'
+  | 'linkedin-image'
+  | 'email-attachment-safe'
+  | 'web-hero'
 
 export type QueueStatus = 'queued' | 'compressing' | 'done' | 'failed' | 'cancelled'
 
 export interface AppSettings {
+  selectedPreset: PresetId
+  targetMode: TargetMode
   targetSize: number
   targetUnit: TargetUnit
+  rangeMinKB: number
+  rangeMaxKB: number
   outputFormat: OutputFormat
   maxWidth: number | ''
   qualityMin: number
@@ -27,6 +37,10 @@ export interface CompressionResult {
   iterations: number
   reachedTarget: boolean
   cannotReachTarget: boolean
+  targetMode: TargetMode
+  targetMinBytes: number
+  targetMaxBytes: number
+  targetMissReason: string | null
   mimeType: OutputFormat
   width: number
   height: number
